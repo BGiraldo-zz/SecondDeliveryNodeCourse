@@ -58,18 +58,18 @@ app.post('/registrarcurso', (req, res) => {
         estado: 'Disponible'
     }
     let respuesta = funciones.registrarCurso(curso);
-    console.log(respuesta);
     res.render('mensaje', {  mensaje: respuesta });
 });
 
 app.post('/cerrarcurso', (req, res) => {
-    console.log(req.body);
     let respuesta = funciones.cerrarCurso(parseInt(req.body.cursoid));
     res.render('mensaje', {  mensaje: respuesta });
 });
 
 app.post('/desinscribir', (req, res) => {
-    let respuesta = funciones.desinscribir(parseInt(req.body.cursoid), parseInt(req.body.aspiranteid));
+    let cursoid = parseInt(req.body.cursoid);
+    let aspiranteid =  parseInt(req.body.aspiranteid);
+    let respuesta = funciones.desinscribir(cursoid, aspiranteid);
     res.render('mensaje', {  mensaje: respuesta });
 });
 

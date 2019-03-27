@@ -2,18 +2,11 @@ const fs = require('fs');
 const path = require('path');
 listaDeCursos = [];
 listaDeAspirantes = [];
-listaDeAspiranteCurso = [];
 
 const directorioData = path.join(__dirname, '../data');
 
 const guardarCursos = () => {
     fs.writeFile(directorioData + '/cursos.json', JSON.stringify(listaDeCursos), (err) => {
-        if (err) throw (err);
-    });
-}
-
-const guardarAspiranteCurso = () => {
-    fs.writeFile(directorioData + '/aspirantecurso.json', JSON.stringify(listaDeAspiranteCurso), (err) => {
         if (err) throw (err);
     });
 }
@@ -37,14 +30,6 @@ const cargarAspirantes = () => {
         listaDeAspirantes = require(directorioData + '/aspirantes.json');
     } catch (error) {
         listaDeAspirantes = [];
-    }
-}
-
-const cargarAspiranteCurso = () => {
-    try {
-        listaDeAspiranteCurso = require(directorioData + '/aspirantecurso.json');
-    } catch (error) {
-        listaDeAspiranteCurso = [];
     }
 }
 
@@ -149,7 +134,7 @@ const listarCursosDisponibles = () => {
         <div class="collapse" id="collap${i}">
             <p>Descripción: ${curso.descripcion}</p>
             <p>Modalidad: ${curso.modalidad}</p>
-            <p>Intensidad Horaria: ${curso.intensidad} Horas c/d </p>
+            <p>Intensidad Horaria: ${curso.intensidad} Horas</p>
         </div>`
         i = i + 1;
     });
@@ -162,57 +147,38 @@ const obtenerCursosDisponibles = () => {
     return listaDeCursos.filter(curso => curso.estado != 'Cerrado');
 }
 
+const validarCurso = (cursoid) => {
+    let curso = listaDeCursos.find(c => c.id == cursoid);
+    if(curso) return true;
+    return false;
+}
+
 const registrarseCurso = (registro) => {
     cargarAspirantes();
-    cargarAspiranteCurso();
-
-   // let aspiranteDuplicado = listaDeAspirantes.find(asp => asp.id == registro.id);
-
-  //  if (!aspiranteDuplicado) {
-
-        let aspiranteCursoDuplicado = listaDeAspiranteCurso.find(aspc => aspc.cursoid == registro.cursoid &
-            aspc.aspiranteid == registro.id);
+    let existeCurso = validarCurso(registro.cursoid);
+    if(existeCurso){
+        let aspiranteCursoDuplicado = listaDeAspirantes.find(aspc => aspc.cursoid == registro.cursoid &
+            aspc.id == registro.id);
         if (!aspiranteCursoDuplicado) {
-            let aspirantecurso = {
-                cursoid: registro.cursoid,
-                aspiranteid: registro.id
-            }
-            listaDeAspiranteCurso.push(aspirantecurso);
-
-            let aspirante = {
-                id: registro.id,
-                nombre: registro.nombre,
-                email: registro.email,
-                telefono: registro.telefono
-            }
-            listaDeAspirantes.push(aspirante);
-
-            guardarAspiranteCurso();
+            listaDeAspirantes.push(registro);
             guardarAspirantes();
-
             return `<div class="alert alert-success" role="alert">ha sido registrado adecuadamente</div>`;
         } else {
             return `<div class='alert alert-danger' role='alert'>
-         Ya existe un aspirante con identificador ${registro.id} registrado al curso 
-         </div>`;
+             Ya existe un aspirante con identificador ${registro.id} registrado al curso 
+             </div>`;
         }
- /*   } else {
-        return `<div class='alert alert-danger' role='alert'>\
-         Ya existe un aspirante registrado con el id ${registro.id} \
-         </div>`;
-    }*/
+    }else{
+        return `<div class='alert alert-danger' role='alert'>
+                No se encuentra el curso al que desea registrarse
+             </div>`;
+    }
 }
 
 const obtenerAspirantesCurso = (cursoid) => {
     cargarAspirantes();
-    cargarAspiranteCurso();
-    listaDeAspirantesEnCurso = [];
-    let aspirantesCurso = listaDeAspiranteCurso.filter(aspc => aspc.cursoid == cursoid);
-    aspirantesCurso.forEach(aspc => {
-        let aspirante = listaDeAspirantes.find(asp => asp.id == aspc.aspiranteid);
-        listaDeAspirantesEnCurso.push(aspirante);
-    });
-    tablaAspirantes = `<form action="/desinscribir" method="POST">
+    let aspirantesEnCurso = listaDeAspirantes.filter(aspc => aspc.cursoid == cursoid);
+    tablaAspirantes = `
     <table class="table">
     <thead class="thead-dark">
         <tr>
@@ -223,7 +189,8 @@ const obtenerAspirantesCurso = (cursoid) => {
           <th>Quitar</th>
         </tr>
     </thead>`
-    listaDeAspirantesEnCurso.forEach(aspc => {
+    var x = 0;
+    aspirantesEnCurso.forEach(aspc => {
         tablaAspirantes = tablaAspirantes + `
         <tr>
             <td>${aspc.id}</td>
@@ -231,15 +198,17 @@ const obtenerAspirantesCurso = (cursoid) => {
             <td>${aspc.email}</td>
             <td>${aspc.telefono}</td>
             <td>
-                
+            <form action="/desinscribir" method="POST">
                     <input type="number" style="display:none;visibility:hidden;" name="cursoid" value="${cursoid}"></input>
                     <input type="number" style="display:none;visibility:hidden;" name="aspiranteid" value="${aspc.id}"></input>
+                    <input type="number" style="display:none;visibility:hidden;" name="pos" value="${x}"></input>
                     <button type="submit" class="btn btn-danger">Eliminar</button>
-               
+             </form>
             </td>
         </tr>`
+        x += 1
     });
-    tablaAspirantes = tablaAspirantes + `</table><form>`
+    tablaAspirantes = tablaAspirantes + `</table>`
     return tablaAspirantes;
 }
 
@@ -267,34 +236,17 @@ const veraspirantes = () => {
     return htmlCursoAspirantes;
 }
 
-const desinscribir = (cursoid, aspiranteid) => 
-{
-    cargarAspiranteCurso();
-   // let listAspiranteCurso = listaDeAspiranteCurso.filter(aspc => aspc.cursoid != cursoid & aspc.aspiranteid != aspiranteid);
-    
-    for (let i = 0; i < listaDeAspiranteCurso.length; i++) {
-        let aspc = listaDeAspiranteCurso[i];
-        if(aspc.cursoid == cursoid & aspc.aspiranteid == aspiranteid){
-            listaDeAspiranteCurso.splice(i, 1);
-            guardarAspiranteCurso();
-            break;
+const desinscribir = (cursoid, aspiranteid) => {
+    cargarAspirantes();
+    for (let i = 0; i < listaDeAspirantes.length; i++) {
+        let aspc = listaDeAspirantes[i];
+        if (aspc.cursoid == cursoid & aspc.id == aspiranteid) {
+            listaDeAspirantes.splice(i, 1);
+            guardarAspirantes();
+            return `<div class="alert alert-success" role="alert">el aspirante ha sido desinscrito del curso</div>`;
         }
-            
     }
-
-    //console.log(listAspiranteCurso);
-   // if(listaDeAspiranteCurso.length != listAspiranteCurso.length){
-        //listaDeAspiranteCurso = listAspiranteCurso;
-       /* cargarAspirantes();
-        let aspirants = listaDeAspirantes.filter(asp => asp.id != aspiranteid);
-        listaDeAspirantes = aspirants;
-        guardarAspirantes();
-        return `<div class="alert alert-success" role="alert">ha sido eliminado correctamente</div>`;
- }else{
-        return `<div class='alert alert-danger' role='alert'>
-        Ha ocurrido un error al eliminar el aspirante del curso
-        </div>`;
-    }*/
+    
 }
 
 module.exports = {
